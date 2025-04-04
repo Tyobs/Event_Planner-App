@@ -4,13 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f69e36be-bbda-466c-8b9e-fd14a474e26d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/DataBase.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Event_PlannerProject.mpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/event_planner.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/window.py" beforeDir="false" afterPath="$PROJECT_DIR$/window.py" afterDir="false" />
-    </list>
+    <list default="true" id="f69e36be-bbda-466c-8b9e-fd14a474e26d" name="Changes" comment="#Creating a simple window and creating a database using SQLite" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -68,6 +62,19 @@
       <option name="presentableId" value="Default" />
       <updated>1743658922615</updated>
     </task>
+    <task id="LOCAL-00001" summary="#Creating a simple window and creating a database using SQLite">
+      <option name="closed" value="true" />
+      <created>1743753051912</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1743753051912</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="#Creating a simple window and creating a database using SQLite" />
+    <option name="LAST_COMMIT_MESSAGE" value="#Creating a simple window and creating a database using SQLite" />
   </component>
 </project>
