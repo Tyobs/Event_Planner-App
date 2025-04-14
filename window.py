@@ -29,4 +29,8 @@ window.attributes("-topmost", True)
 window.attributes("-alpha", 0.95)
 window.overrideredirect(False)
 window.wm_attributes("-toolwindow", True)
+image = tk.PhotoImage(file="D:\LineX Icon Pack\eventbrite.png")
+lab = Label(window, image = image)
+lab.pack()
+
 window.mainloop()
