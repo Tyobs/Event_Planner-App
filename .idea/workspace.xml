@@ -5,10 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f69e36be-bbda-466c-8b9e-fd14a474e26d" name="Changes" comment="#hashtag">
-      <change beforePath="$PROJECT_DIR$/.idea/quicknote.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/quicknote.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/EventPlannerApp.py" beforeDir="false" afterPath="$PROJECT_DIR$/EventPlannerApp.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/event_planner.db" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner.db" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,9 +36,21 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "hanieyo1407"
+  }
+}]]></component>
   <component name="GithubDefaultAccount">
     <option name="defaultAccountId" value="07ad08e8-d8ff-40c5-965b-b06afb219d34" />
   </component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/hanieyo1407/Event_Planner-App.git",
+    "accountId": "07ad08e8-d8ff-40c5-965b-b06afb219d34"
+  }
+}]]></component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/EventPlannerApp.py" root0="SKIP_HIGHLIGHTING" />
   </component>
