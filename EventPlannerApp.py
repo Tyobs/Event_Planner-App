@@ -477,7 +477,7 @@ class EventPlannerApp:
     def create_widgets(self):
         self.create_events_tab()
         self.create_tasks_tab()
-        self.create_guest_tab()
+        self.create_guests_tab()
         self.create_budget_tab()
         self.create_vendor_tab()
 
@@ -532,24 +532,28 @@ class EventPlannerApp:
         delete_task_button = ttk.Button(self.tasks_frame, text="Delete Task", command=self.delete_selected_task)
         delete_task_button.pack(pady=5, fill=tk.X)
 
-    def create_guest_tab(self):
-        self.guest_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.guest_frame, text="Guests")
+    def create_guests_tab(self):
+        self.guests_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.guests_frame, text='Guests')
 
-        self.guest_list = tk.Listbox(self.guest_frame, width=50)
-        self.guest_list.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        self.guests_list = tk.Listbox(self.guests_frame, width=50)
+        self.guests_list.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-        load_guests_button = ttk.Button(self.guest_frame, text="Load Guests")
-        load_guests_button.pack(pady=5)
+        ttk.Label(self.guests_frame, text="Select Guest by ID:").pack(pady=5)
+        self.select_guest_id_entry = ttk.Entry(self.guests_frame, width=10)
+        self.select_guest_id_entry.pack(pady=5)
 
-        self.create_guest_button = ttk.Button(self.guest_frame, text="Add new task")
-        self.create_guest_button.pack(pady=5)
+        load_all_guests_button = ttk.Button(self.guests_frame, text="Load All Guests", command=self.load_all_guests)
+        load_all_guests_button.pack(pady=5, fill=tk.X)
 
-        self.update_guest_button = ttk.Button(self.guest_frame, text="Update Task")
-        self.update_guest_button.pack(pady=5)
+        add_guest_button = ttk.Button(self.guests_frame, text="Add New Guest", command=self.open_add_guest_window)
+        add_guest_button.pack(pady=5, fill=tk.X)
 
-        self.delete_guest_button = ttk.Button(self.guest_frame, text="Delete task")
-        self.delete_guest_button.pack(pady=5)
+        update_guest_button = ttk.Button(self.guests_frame, text="Update Guest", command=self.open_update_guest_window)
+        update_guest_button.pack(pady=5, fill=tk.X)
+
+        delete_guest_button = ttk.Button(self.guests_frame, text="Delete Guest", command=self.delete_selected_guest)
+        delete_guest_button.pack(pady=5, fill=tk.X)
 
     def create_budget_tab(self):
         self.budget_frame = ttk.Frame(self.notebook)
@@ -923,6 +927,165 @@ class EventPlannerApp:
         except ValueError:
             messagebox.showerror("Error", "Please enter a numeric Task ID and Event ID.")
 
+#this function will be used in loading the guest list to the window
+    def load_all_guests(self):
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT guest_id, event_id, guest_name, guest_email, guest_phone, rsvp_status FROM guest')
+        guest = cursor.fetchall()
+        conn.close()
+
+        self.guests_list.delete(0, tk.END)
+        if guest:
+            for guests in guest:
+                self.guests_list.insert(tk.END,
+                                        f"Guest ID: {guests[0]}, Event ID: {guests[1]}, Name: {guests[2]}, Email: {guests[3]}, Phone: {guests[4]}, RSVP: {guests[5]}")
+        else:
+            messagebox.showinfo("Info", "No guests found.")
+
+#this function will be used whne creating a new guest in our database
+    def open_add_guest_window(self):
+        self.add_guest_window = tk.Toplevel(self.window)
+        self.add_guest_window.title("Add New Guest")
+
+        tk.Label(self.add_guest_window, text="Event ID:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.guest_event_id_entry = tk.Entry(self.add_guest_window, width=40)
+        self.guest_event_id_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_guest_window, text="Guest Name:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.guest_name_entry = tk.Entry(self.add_guest_window, width=40)
+        self.guest_name_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_guest_window, text="Guest Email:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.guest_email_entry = tk.Entry(self.add_guest_window, width=40)
+        self.guest_email_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_guest_window, text="Guest Phone:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        self.guest_phone_entry = tk.Entry(self.add_guest_window, width=40)
+        self.guest_phone_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_guest_window, text="RSVP Status:").grid(row=4, column=0, padx=5, pady=5, sticky="w")
+        self.guest_rsvp_status_entry = tk.Entry(self.add_guest_window, width=40)
+        self.guest_rsvp_status_entry.grid(row=4, column=1, padx=5, pady=5)
+
+        save_guest_button = ttk.Button(self.add_guest_window, text="Save Guest", command=self.save_new_guest)
+        save_guest_button.grid(row=5, column=0, columnspan=2, padx=5, pady=10)
+
+        cancel_guest_button = ttk.Button(self.add_guest_window, text="Cancel", command=self.add_guest_window.destroy)
+        cancel_guest_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+
+#this function will be triggered when the user hits the save button to save the created guest
+    def save_new_guest(self):
+        try:
+            event_id = int(self.guest_event_id_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Invalid Event ID. Please enter a number.")
+            return
+
+        guest_name = self.guest_name_entry.get()
+        guest_email = self.guest_email_entry.get()
+        guest_phone = self.guest_phone_entry.get()
+        rsvp_status = self.guest_rsvp_status_entry.get()
+
+        if not guest_name or not guest_email or not guest_phone or not rsvp_status:
+            messagebox.showerror("Error", "Please fill in all the required fields (Name, Email, Phone, RSVP Status).")
+            return
+
+        if create_guest(event_id, guest_name, guest_email, guest_phone, rsvp_status):
+            messagebox.showinfo("Success", f"Guest '{guest_name}' added to Event ID {event_id}!")
+            self.load_all_guests()
+            self.add_guest_window.destroy()
+        else:
+            messagebox.showerror("Error", "Failed to add the guest. Please check the details.")
+
+#this function will be used to update the existing guest
+    def open_update_guest_window(self):
+        try:
+            guest_id = int(self.select_guest_id_entry.get())
+            if guest_id > 0:
+                guest = read_guest(guest_id)
+                if guest:
+                    self.update_guest_window = tk.Toplevel(self.window)
+                    self.update_guest_window.title(f"Update Guest: {guest[2]}")
+
+                    tk.Label(self.update_guest_window, text="Event ID:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+                    self.update_guest_event_id_entry = tk.Entry(self.update_guest_window, width=40)
+                    self.update_guest_event_id_entry.insert(0, guest[1])
+                    self.update_guest_event_id_entry.grid(row=0, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_guest_window, text="Guest Name:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+                    self.update_guest_name_entry = tk.Entry(self.update_guest_window, width=40)
+                    self.update_guest_name_entry.insert(0, guest[2])
+                    self.update_guest_name_entry.grid(row=1, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_guest_window, text="Guest Email:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+                    self.update_guest_email_entry = tk.Entry(self.update_guest_window, width=40)
+                    self.update_guest_email_entry.insert(0, guest[3])
+                    self.update_guest_email_entry.grid(row=2, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_guest_window, text="Guest Phone:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+                    self.update_guest_phone_entry = tk.Entry(self.update_guest_window, width=40)
+                    self.update_guest_phone_entry.insert(0, guest[4])
+                    self.update_guest_phone_entry.grid(row=3, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_guest_window, text="RSVP Status:").grid(row=4, column=0, padx=5, pady=5, sticky="w")
+                    self.update_guest_rsvp_status_entry = tk.Entry(self.update_guest_window, width=40)
+                    self.update_guest_rsvp_status_entry.insert(0, guest[5])
+                    self.update_guest_rsvp_status_entry.grid(row=4, column=1, padx=5, pady=5)
+
+                    save_button = ttk.Button(self.update_guest_window, text="Save Changes", command=self.save_updated_guest)
+                    save_button.grid(row=5, column=0, columnspan=2, padx=5, pady=10)
+
+                    cancel_button = ttk.Button(self.update_guest_window, text="Cancel", command=self.update_guest_window.destroy)
+                    cancel_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+                else:
+                    messagebox.showerror("Error", f"Could not find guest with ID: {guest_id}")
+            else:
+                messagebox.showerror("Error", "Please enter a valid Guest ID.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Guest ID.")
+
+#this function will save the updated information of the guest
+    def save_updated_guest(self):
+        try:
+            guest_id = int(self.select_guest_id_entry.get())
+            if guest_id > 0:
+                event_id = int(self.update_guest_event_id_entry.get())
+                guest_name = self.update_guest_name_entry.get()
+                guest_email = self.update_guest_email_entry.get()
+                guest_phone = self.update_guest_phone_entry.get()
+                rsvp_status = self.update_guest_rsvp_status_entry.get()
+
+                if not guest_name or not guest_email or not guest_phone or not rsvp_status:
+                    messagebox.showerror("Error", "Please fill in all the required fields (Name, Email, Phone, RSVP Status).")
+                    return
+
+                if update_guest(guest_id, event_id, guest_name, guest_email, guest_phone, rsvp_status):
+                    messagebox.showinfo("Success", f"Guest '{guest_name}' updated successfully!")
+                    self.load_all_guests()
+                    self.update_guest_window.destroy()
+                else:
+                    messagebox.showerror("Error", "Failed to update the guest. Please check the details.")
+            else:
+                messagebox.showerror("Error", "Please enter a valid Guest ID to update.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Guest ID and Event ID.")
+
+#this function will be used in deleting a guest
+    def delete_selected_guest(self):
+        try:
+            guest_id = int(self.select_guest_id_entry.get())
+            if guest_id > 0:
+                if messagebox.askyesno("Confirm", f"Are you sure you want to delete guest ID {guest_id}?"):
+                    if delete_guest(guest_id):
+                        messagebox.showinfo("Success", f"Guest ID {guest_id} deleted successfully!")
+                        self.load_all_guests()
+                    else:
+                        messagebox.showerror("Error", f"Failed to delete guest ID {guest_id}.")
+            else:
+                messagebox.showerror("Error", "Please enter a valid Guest ID.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Guest ID.")
 
 if __name__ == "__main__":
     window = tk.Tk()
