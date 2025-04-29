@@ -484,25 +484,30 @@ class EventPlannerApp:
 #creatin a function for events tab and the other tabs, task, guest, vendor, and budget
     def create_events_tab(self):
         self.events_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.events_frame, text="Events")
+        self.notebook.add(self.events_frame, text='Events')
 
         self.events_list = tk.Listbox(self.events_frame, width=50)
         self.events_list.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-        self.events_list.bind('ListboxtSelect', self.on_event_select)
+        # We can keep the listbox bind for potential future debugging or use
+        # it as a visual reference.
+
+        ttk.Label(self.events_frame, text="Select Event by ID:").pack(pady=5)
+        self.select_event_id_entry = ttk.Entry(self.events_frame, width=10)
+        self.select_event_id_entry.pack(pady=5)
+
+        load_events_button = ttk.Button(self.events_frame, text="Load Events", command=self.load_events)
+        load_events_button.pack(pady=5, fill=tk.X)
+
+        update_event_button = ttk.Button(self.events_frame, text="Update Event", command=self.open_update_event_by_id)
+        update_event_button.pack(pady=5, fill=tk.X)
+
+        delete_event_button = ttk.Button(self.events_frame, text="Delete Event", command=self.delete_event_by_id)
+        delete_event_button.pack(pady=5, fill=tk.X)
 
         create_event_button = ttk.Button(self.events_frame, text="Create New Event", command=self.open_create_event_window)
-        create_event_button.pack(pady=5)
+        create_event_button.pack(pady=5, fill=tk.X)
 
-        load_events_button =ttk.Button(self.events_frame, text="Load Events", command=self.load_events)
-        load_events_button.pack(pady=5)
-
-        self.update_event_button = ttk.Button(self.events_frame, text="Update Event", command=self.open_update_event_window)
-        self.update_event_button.pack(pady=5)
-
-        self.delete_event_button = ttk.Button(self.events_frame, text="Delete Event")
-        self.delete_event_button.pack(pady=5)
-
-        self.selected_event_id = None #To store the ID of the selected event
+        self.selected_event_id = None  #To store the ID of the selected event
 
     def create_task_tab(self):
         self.task_frame = ttk.Frame(self.notebook)
@@ -582,21 +587,27 @@ class EventPlannerApp:
 
 #this function will enable the selection of an existing event in events tab
     def on_event_select(self, event):
+        print("on_event_select called")
         selected_index = self.events_list.curselection()
+        print(f"Selected index: {selected_index}")
         if selected_index:
             selected_event_text = self.events_list.get(selected_index[0])
+            print(f"Selected event text: {selected_event_text}")
             try:
-                self.selected_event_id = int(selected_event_text.split('.')[0]) #Extracting the event ID
+                self.selected_event_id = int(selected_event_text.split('.')[0]) # Extract the event ID
+                print(f"Selected event ID: {self.selected_event_id}")
                 self.update_event_button.config(state=tk.NORMAL)
-                self.delete_event_button.config(state=NORMAL)
+                self.delete_event_button.config(state=tk.NORMAL)
             except ValueError:
                 self.selected_event_id = None
-                self.update_event_button.config(state=DISABLED)
-                self.delete_event_button.config(state=DISABLED)
-            else:
-                self.selected_event_id = None
-                self.update_event_button.config(state=DISABLED)
-                self.delete_event_button.config(state=DISABLED)
+                self.update_event_button.config(state=tk.DISABLED)
+                self.delete_event_button.config(state=tk.DISABLED)
+                print("ValueError: Could not extract event ID.")
+        else:
+            self.selected_event_id = None
+            self.update_event_button.config(state=tk.DISABLED)
+            self.delete_event_button.config(state=tk.DISABLED)
+            print("No event selected.")
 
 #function for leading events to window in the notepad form
     def load_events(self):
@@ -640,50 +651,68 @@ class EventPlannerApp:
         cancel_button.grid(row=7, colum=0, columnspan=2, padx=5, pady=5)
 
 #A function that will be triggered  when the user wants to update an event with the connection of "selected event" function
-    def open_update_event_window(self):
-        if self.selected_event_id:
-            event = read_event(self.selected_event_id)
-            if event:
-                self.update_event_window = tk.Toplevel(self.root)
-                self.update_event_window.title(f"Update Event: {event[1]}")  # Use event name in title
+    def open_update_event_by_id(self):
+        try:
+            event_id = int(self.select_event_id_entry.get())
+            if event_id > 0:
+                self.selected_event_id = event_id #this line means we are setting the id
+                event = read_event(self.selected_event_id)
+                if event:
+                    self.update_event_window = tk.Toplevel(self.window)
+                    self.update_event_window.title(f"Update Event: {event[1]}")
 
-                # Labels and Entry widgets for event details (similarally creating a new event)
-                tk.Label(self.update_event_window, text="Event Name:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
-                self.update_event_name_entry = tk.Entry(self.update_event_window, width=40)
-                self.update_event_name_entry.insert(0, event[1])  #This will be filling the existing data
-                self.update_event_name_entry.grid(row=0, column=1, padx=5, pady=5)
+                    #this will be same as the creating event window but with content prefilled
+                    tk.Label(self.update_event_window, text="Event Name:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+                    self.update_event_name_entry = tk.Entry(self.update_event_window, width=40)
+                    self.update_event_name_entry.insert(0, event[1])
+                    self.update_event_name_entry.grid(row=0, column=1, padx=5, pady=5)
+                    tk.Label(self.update_event_window, text="Date (YYYY-MM-DD):").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+                    self.update_event_date_entry = tk.Entry(self.update_event_window, width=40)
+                    self.update_event_date_entry.insert(0, event[2])
+                    self.update_event_date_entry.grid(row=1, column=1, padx=5, pady=5)
 
-                tk.Label(self.update_event_window, text="Date (DD/MM/YYYY):").grid(row=1, column=0, padx=5, pady=5, sticky="w")
-                self.update_event_date_entry = tk.Entry(self.update_event_window, width=40)
-                self.update_event_date_entry.insert(0, event[2])
-                self.update_event_date_entry.grid(row=1, column=1, padx=5, pady=5)
+                    tk.Label(self.update_event_window, text="Time (HH:MM):").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+                    self.update_event_time_entry = tk.Entry(self.update_event_window, width=40)
+                    self.update_event_time_entry.insert(0, event[3])
+                    self.update_event_time_entry.grid(row=2, column=1, padx=5, pady=5)
 
-                tk.Label(self.update_event_window, text="Time (HH:MM):").grid(row=2, column=0, padx=5, pady=5,sticky="w")
-                self.update_event_time_entry = tk.Entry(self.update_event_window, width=40)
-                self.update_event_time_entry.insert(0, event[3])
-                self.update_event_time_entry.grid(row=2, column=1, padx=5, pady=5)
+                    tk.Label(self.update_event_window, text="Location:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+                    self.update_event_location_entry = tk.Entry(self.update_event_window, width=40)
+                    self.update_event_location_entry.insert(0, event[4])
+                    self.update_event_location_entry.grid(row=3, column=1, padx=5, pady=5)
 
-                tk.Label(self.update_event_window, text="Location:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
-                self.update_event_location_entry = tk.Entry(self.update_event_window, width=40)
-                self.update_event_location_entry.insert(0, event[4])
-                self.update_event_location_entry.grid(row=3, column=1, padx=5, pady=5)
+                    tk.Label(self.update_event_window, text="Description:").grid(row=4, column=0, padx=5, pady=5, sticky="w")
+                    self.update_event_description_entry = tk.Text(self.update_event_window, width=30, height=5)
+                    self.update_event_description_entry.insert(tk.END, event[5])
+                    self.update_event_description_entry.grid(row=4, column=1, padx=5, pady=5)
 
-                tk.Label(self.update_event_window, text="Description:").grid(row=4, column=0, padx=5, pady=5,
-                                                                             sticky="w")
-                self.update_event_description_entry = tk.Text(self.update_event_window, width=30, height=5)
-                self.update_event_description_entry.insert(tk.END, event[5])  # Fill with existing description
-                self.update_event_description_entry.grid(row=4, column=1, padx=5, pady=5)
+                    save_button = ttk.Button(self.update_event_window, text="Save Changes", command=self.save_updated_event)
+                    save_button.grid(row=5, column=0, columnspan=2, padx=5, pady=10)
 
-                save_button = ttk.Button(self.update_event_window, text="Save Changes", command=self.save_updated_event)
-                save_button.grid(row=5, column=0, columnspan=2, padx=5, pady=10)
-
-                cancel_button = ttk.Button(self.update_event_window, text="Cancel", command=self.update_event_window.destroy)
-                cancel_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+                    cancel_button = ttk.Button(self.update_event_window, text="Cancel", command=self.update_event_window.destroy)
+                    cancel_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+                else:
+                    messagebox.showerror("Error", f"Could not find event with ID: {event_id}")
             else:
-                messagebox.showerror("Error", "Could not retrieve event details.")
-        else:
-            messagebox.showinfo("Info", "Please select an event to update.")
+                messagebox.showerror("Error", "Please enter a valid Event ID.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Event ID.")
 
+#this function will be used to delete an event from the database
+    def delete_event_by_id(self):
+        try:
+            event_id = int(self.select_event_id_entry.get())
+            if event_id > 0:
+                if messagebox.askyesno("Confirm", f"Are you sure you want to delete event ID {event_id}?"):
+                    if delete_event(event_id):
+                        messagebox.showinfo("Success", f"Event ID {event_id} deleted successfully!")
+                        self.load_events()
+                    else:
+                        messagebox.showerror("Error", f"Failed to delete event ID {event_id}.")
+            else:
+                messagebox.showerror("Error", "Please enter a valid Event ID.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Event ID.")
 
 #this function will be used after clicking the "save" button in event creation window
     def save_new_event(self):
@@ -703,42 +732,57 @@ class EventPlannerApp:
         else:
             messagebox.showerror("ERROR!", "Oooops! The system has failed to create the task. Please check the details.")
 
+#this function will be used to save the updated event
+    def save_updated_event(self):
+        if self.selected_event_id:
+            event_name = self.update_event_name_entry.get()
+            event_date = self.update_event_date_entry.get()
+            event_time = self.update_event_time_entry.get()
+            event_location = self.update_event_location_entry.get()
+            event_description = self.update_event_description_entry.get("1.0", tk.END).strip()
+
+            if not event_name or not event_date or not event_time or not event_location:
+                messagebox.showerror("Error", "Please fill in all the required fields.")
+                return
+
+            if update_event(self.selected_event_id, event_name, event_date, event_time, event_location, event_description):
+                messagebox.showinfo("Success", f"Event '{event_name}' updated successfully!")
+                self.load_events()  #this will reload the events list after a succeccful udate
+                self.update_event_window.destroy()
+            else:
+                messagebox.showerror("Error", "Failed to update the event. Please check the details.")
+        else:
+            messagebox.showinfo("Info", "No event selected to update.")
 
 #this function will be used in leading/viewing the tasks if they exist in the notepad
-    def load_tasks(self):
-        tasks = read_tasks()
-        self.task_list.delete(0, tk.END)
-        if tasks:
-            for task in tasks:
-                self.events_list.insert(tk.END,
-                                        f"{task[0]}.   {task[1]}  {task[3]}   ({task[2]})    {task[4]}     {task[5]}")
-        else:
-            messagebox.showinfo("Infor", "No tasks found.🤣🤣")
+    def load_tasks(self, event_id):
+        print(None)
 
-#this function will open a new window that will be used in creating a new task, this function is unde construction
+
+#this function will open a new window that will be used in creating a new task, this function is under construction
     def open_create_task_window(self):
         self.create_task_window = tk.Toplevel(self.window)
         self.create_task_window.title("Create task")
 
-        tk.Label(self.create_task_window, text="Task Name:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        tk.Label(self.create_task_window, text="Event ID:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.task_event_id_entry = tk.Entry(self.create_task_window, width=40)
+        self.task_event_id_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(self.create_task_window, text="Task Name:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
         self.task_name_entry = tk.Entry(self.create_task_window, width=40)
-        self.task_name_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.task_name_entry.grid(row=1, column=1, padx=5, pady=5)
 
-        tk.Label(self.create_task_window, text="Task Date (DD/MM/YYYY):").grid(row=1, column=0, padx=5, pady=5, sticky="w")
-        self.task_date_entry = tk.Entry(self.create_task_window, width=40)
-        self.task_date_entry.grid(row=1, column=1, padx=5, pady=5)
-
-        tk.Label(self.create_task_window, text="Task Time (HH:MM):").grid(row=2, column=0, padx=5, pady=5, sticky="w")
-        self.task_time_entry = Entry(self.create_task_window, width=40)
-        self.task_time_entry.grid(row=2, column=1, padx=5, pady=5)
-
-        tk.Label(self.create_task_window, text="Task Location Entry").grid(row=3, column=0, padx=5, pady=5, sticky="w")
-        self.task_location_entry = Entry(self.create_task_window, width=40)
-        self.task_location_entry.grid(row=3, column=1, padx=5, pady=5)
-
-        Label(self.create_task_window, text="Task Description:").grid(row=4, column=0, padx=5, pady=5, sticky="w")
+        tk.Label(self.create_task_window, text="Description:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
         self.task_description_entry = Text(self.create_task_window, width=30, height=5)
-        self.task_description_entry.grid(row=4, column=1, padx=5, pady=5)
+        self.task_description_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        tk.Label(self.create_task_window, text="Due Date (DD/MM/YYYY)").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        self.task_due_date_entry = Entry(self.create_task_window, width=40)
+        self.task_due_date_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        Label(self.create_task_window, text="Status:").grid(row=4, column=0, padx=5, pady=5, sticky="w")
+        self.task_status_entry = Entry(self.create_task_window, width=40)
+        self.task_status_entry.grid(row=4, column=1, padx=5, pady=5)
 
         save_button = ttk.Button(self.create_task_window, text="Save Task", command=self.save_new_task)
         save_button.grid(row=5, column=0, columnspan=2, padx=5, pady=10)
@@ -748,22 +792,25 @@ class EventPlannerApp:
 
 #this will be used when saving the task into our db
     def save_new_task(self):
-        task_name = self.task_name_entry.get()
-        task_date = self.task_date_entry.get()
-        task_time = self.task_time_entry.get()
-        task_location = self.task_location_entry.get()
-        task_description = self.task_description_entry.get("1.0", tk.END).strip()
-
-        if not task_name or not task_date or not task_time or not task_location:
-            messagebox.showerror("Blank Input", "An Error⚠️ occurred due to blank fill. Please fill in the entry spaces provided😊.")
+        try:
+            event_id = int(self.task_event_id_entry.get())
+        except ValueError:
+            messagebox.showerror("ValueError", "Mmhuu!😒 Invalid event ID. Please enter the correct event ID.")
             return
-        if  create_task(task_name, task_date, task_time, task_location, task_description):
-            messagebox.showinfo("Success😊", f"You ave successfully created and event '{task_name}'!😊")
-            self.load_tasks()
-            self.open_create_task_window.destroy()
-        else:
-            messagebox.showerror("ERROR!", "Oooops! The system has failed to create the event. Please check the details.")
+        task_name = self.task_name_entry.get()
+        task_descripton = self.task_description_entry.get("1.0", tk.END).strip()
+        task_due_date = self.task_due_date_entry.get()
+        task_status = self.task_status_entry.get()
 
+        if not task_name or not task_due_date or not task_status:
+            messagebox.showerror("Task Error", "Please fill in the correct details for complete task.")
+            return
+        if create_task(event_id, task_name, task_descripton, task_due_date, task_status):
+            messagebox.showinfo("Task Success", f"Task '{task_name}' has been successfuly created to event '{event_id}' ")
+            self.load_tasks()
+            self.create_task_window.destroy()
+        else:
+            messagebox.showerror("Its me not you", "Unknown error occured while trying o create the task, please restart the app.")
 #function for deleting a task from our db (under construction)
     def delete_task(self):
         print()
