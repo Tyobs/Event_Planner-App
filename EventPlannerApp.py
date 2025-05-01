@@ -478,7 +478,7 @@ class EventPlannerApp:
         self.create_events_tab()
         self.create_tasks_tab()
         self.create_guests_tab()
-        self.create_budget_tab()
+        self.create_budgets_tab()
         self.create_vendor_tab()
 
 #creatin a function for events tab and the other tabs, task, guest, vendor, and budget
@@ -555,24 +555,36 @@ class EventPlannerApp:
         delete_guest_button = ttk.Button(self.guests_frame, text="Delete Guest", command=self.delete_selected_guest)
         delete_guest_button.pack(pady=5, fill=tk.X)
 
-    def create_budget_tab(self):
-        self.budget_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.budget_frame, text="Budgets")
+    def create_budgets_tab(self):
+        self.budgets_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.budgets_frame, text='Budgets')
 
-        self.budget_list = tk.Listbox(self.budget_frame, width=50)
-        self.budget_list.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        self.budgets_tree = ttk.Treeview(self.budgets_frame,columns=('ID', 'Event ID', 'Category', 'Amount', 'Description'),show='headings')
+        self.budgets_tree.heading('ID', text='Budget ID')
+        self.budgets_tree.heading('Event ID', text='Event ID')
+        self.budgets_tree.heading('Category', text='Category')
+        self.budgets_tree.heading('Amount', text='Amount')
+        self.budgets_tree.heading('Description', text='Description')
+        self.budgets_tree.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-        load_budgets_button = ttk.Button(self.budget_frame, text="Load Tasks")
-        load_budgets_button.pack(pady=5)
+        ttk.Label(self.budgets_frame, text="Select Budget Item by ID:").pack(pady=5)
+        self.select_budget_id_entry = ttk.Entry(self.budgets_frame, width=10)
+        self.select_budget_id_entry.pack(pady=5)
 
-        self.create_budget_button = ttk.Button(self.budget_frame, text="Add new task")
-        self.create_budget_button.pack(pady=5)
+        load_all_budgets_button = ttk.Button(self.budgets_frame, text="Load All Budgets", command=self.load_all_budgets)
+        load_all_budgets_button.pack(pady=5, fill=tk.X)
 
-        self.update_budget_button = ttk.Button(self.budget_frame, text="Update Task")
-        self.update_budget_button.pack(pady=5)
+        add_budget_button = ttk.Button(self.budgets_frame, text="Add New Budget Item",
+                                       command=self.open_add_budget_window)
+        add_budget_button.pack(pady=5, fill=tk.X)
 
-        self.delete_budget_button = ttk.Button(self.budget_frame, text="Delete task")
-        self.delete_budget_button.pack(pady=5)
+        update_budget_button = ttk.Button(self.budgets_frame, text="Update Budget Item",
+                                          command=self.open_update_budget_window)
+        update_budget_button.pack(pady=5, fill=tk.X)
+
+        delete_budget_button = ttk.Button(self.budgets_frame, text="Delete Budget Item",
+                                          command=self.delete_selected_budget)
+        delete_budget_button.pack(pady=5, fill=tk.X)
 
     def create_vendor_tab(self):
         self.vendor_frame = ttk.Frame(self.notebook)
@@ -1086,6 +1098,176 @@ class EventPlannerApp:
                 messagebox.showerror("Error", "Please enter a valid Guest ID.")
         except ValueError:
             messagebox.showerror("Error", "Please enter a numeric Guest ID.")
+
+#this function will be used to load all budgets to the window
+    def load_all_budgets(self):
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT budget_id, event_id, category, amount, description FROM budgets')
+        budgets = cursor.fetchall()
+        conn.close()
+
+        # Clear existing items in the Treeview
+        for item in self.budgets_tree.get_children():
+            self.budgets_tree.delete(item)
+
+        if budgets:
+            for budget_item in budgets:
+                self.budgets_tree.insert('', tk.END, values=budget_item)
+        else:
+            messagebox.showinfo("Info", "No budget items found.")
+
+#this function opens a new window for creating a new budget
+    def open_add_budget_window(self):
+        self.add_budget_window = tk.Toplevel(self.window)
+        self.add_budget_window.title("Add New Budget Item")
+
+        tk.Label(self.add_budget_window, text="Event ID:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.budget_event_id_entry = tk.Entry(self.add_budget_window, width=40)
+        self.budget_event_id_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_budget_window, text="Category:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.budget_category_entry = tk.Entry(self.add_budget_window, width=40)
+        self.budget_category_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_budget_window, text="Amount:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.budget_amount_entry = tk.Entry(self.add_budget_window, width=40)
+        self.budget_amount_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_budget_window, text="Description:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        self.budget_description_entry = tk.Text(self.add_budget_window, width=30, height=3)
+        self.budget_description_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        save_budget_button = ttk.Button(self.add_budget_window, text="Save Budget Item", command=self.save_new_budget)
+        save_budget_button.grid(row=4, column=0, columnspan=2, padx=5, pady=10)
+
+        cancel_budget_button = ttk.Button(self.add_budget_window, text="Cancel", command=self.add_budget_window.destroy)
+        cancel_budget_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
+
+#this function saves the newly created budgget
+    def save_new_budget(self):
+        try:
+            event_id = int(self.budget_event_id_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Invalid Event ID. Please enter a number.")
+            return
+
+        category = self.budget_category_entry.get()
+        try:
+            amount = float(self.budget_amount_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Invalid Amount. Please enter a number.")
+            return
+        description = self.budget_description_entry.get("1.0", tk.END).strip()
+
+        if not category or amount is None:
+            messagebox.showerror("Error", "Please enter the category and amount.")
+            return
+
+        if create_budget(event_id, category, amount, description):
+            messagebox.showinfo("Success", f"Budget item '{category}' added to Event ID {event_id}!")
+            self.load_all_budgets()
+            self.add_budget_window.destroy()
+        else:
+            messagebox.showerror("Error", "Failed to add the budget item. Please check the details.")
+
+#this function open a window for updating the selected budget
+    def open_update_budget_window(self):
+        try:
+            budget_id = int(self.select_budget_id_entry.get())
+            if budget_id > 0:
+                budget_item = read_budget(budget_id)
+                if budget_item:
+                    self.update_budget_window = tk.Toplevel(self.window)
+                    self.update_budget_window.title(f"Update Budget Item: {budget_item[2]}")
+
+                    tk.Label(self.update_budget_window, text="Event ID:").grid(row=0, column=0, padx=5, pady=5,
+                                                                               sticky="w")
+                    self.update_budget_event_id_entry = tk.Entry(self.update_budget_window, width=40)
+                    self.update_budget_event_id_entry.insert(0, budget_item[1])
+                    self.update_budget_event_id_entry.grid(row=0, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_budget_window, text="Category:").grid(row=1, column=0, padx=5, pady=5,
+                                                                               sticky="w")
+                    self.update_budget_category_entry = tk.Entry(self.update_budget_window, width=40)
+                    self.update_budget_category_entry.insert(0, budget_item[2])
+                    self.update_budget_category_entry.grid(row=1, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_budget_window, text="Amount:").grid(row=2, column=0, padx=5, pady=5,
+                                                                             sticky="w")
+                    self.update_budget_amount_entry = tk.Entry(self.update_budget_window, width=40)
+                    self.update_budget_amount_entry.insert(0, budget_item[3])
+                    self.update_budget_amount_entry.grid(row=2, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_budget_window, text="Description:").grid(row=3, column=0, padx=5, pady=5,
+                                                                                  sticky="w")
+                    self.update_budget_description_entry = tk.Text(self.update_budget_window, width=30, height=3)
+                    self.update_budget_description_entry.insert(tk.END, budget_item[4])
+                    self.update_budget_description_entry.grid(row=3, column=1, padx=5, pady=5)
+
+                    save_button = ttk.Button(self.update_budget_window, text="Save Changes",
+                                             command=self.save_updated_budget)
+                    save_button.grid(row=4, column=0, columnspan=2, padx=5, pady=10)
+
+                    cancel_button = ttk.Button(self.update_budget_window, text="Cancel",
+                                               command=self.update_budget_window.destroy)
+                    cancel_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
+                else:
+                    messagebox.showerror("Error", f"Could not find budget item with ID: {budget_id}")
+            else:
+                messagebox.showerror("Error", "Please enter a valid Budget ID.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Budget ID.")
+
+#this function saves the new updates of the selected budget
+    def save_updated_budget(self):
+        try:
+            budget_id = int(self.select_budget_id_entry.get())
+            if budget_id > 0:
+                try:
+                    event_id = int(self.update_budget_event_id_entry.get())
+                except ValueError:
+                    messagebox.showerror("Error", "Invalid Event ID. Please enter a number.")
+                    return
+                category = self.update_budget_category_entry.get()
+                try:
+                    amount = float(self.update_budget_amount_entry.get())
+                except ValueError:
+                    messagebox.showerror("Error", "Invalid Amount. Please enter a number.")
+                    return
+                description = self.update_budget_description_entry.get("1.0", tk.END).strip()
+
+                if not category or amount is None:
+                    messagebox.showerror("Error", "Please enter the category and amount.")
+                    return
+
+                if update_budget(budget_id, category, amount, description):
+                    messagebox.showinfo("Success", f"Budget item '{category}' updated successfully!")
+                    self.load_all_budgets()
+                    self.update_budget_window.destroy()
+                else:
+                    messagebox.showerror("Error", "Failed to update the budget item. Please check the details.")
+            else:
+                messagebox.showerror("Error", "Please enter a valid Budget ID to update.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Budget ID.")
+
+#this function deletes the selected
+    def delete_selected_budget(self):
+        try:
+            budget_id = int(self.select_budget_id_entry.get())
+            if budget_id > 0:
+                if messagebox.askyesno("Confirm", f"Are you sure you want to delete budget item ID {budget_id}?"):
+                    if delete_budget(budget_id):
+                        messagebox.showinfo("Success", f"Budget item ID {budget_id} deleted successfully!")
+                        self.load_all_budgets()
+                    else:
+                        messagebox.showerror("Error", f"Failed to delete budget item ID {budget_id}.")
+            else:
+                messagebox.showerror("Error", "Please enter a valid Budget ID.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Budget ID.")
+
 
 if __name__ == "__main__":
     window = tk.Tk()

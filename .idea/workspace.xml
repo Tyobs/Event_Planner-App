@@ -36,21 +36,21 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "hanieyo1407"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;hanieyo1407&quot;
   }
-}]]></component>
+}</component>
   <component name="GithubDefaultAccount">
     <option name="defaultAccountId" value="07ad08e8-d8ff-40c5-965b-b06afb219d34" />
   </component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/hanieyo1407/Event_Planner-App.git",
-    "accountId": "07ad08e8-d8ff-40c5-965b-b06afb219d34"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/hanieyo1407/Event_Planner-App.git&quot;,
+    &quot;accountId&quot;: &quot;07ad08e8-d8ff-40c5-965b-b06afb219d34&quot;
   }
-}]]></component>
+}</component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/EventPlannerApp.py" root0="FORCE_HIGHLIGHTING" />
   </component>
@@ -82,7 +82,7 @@
     "git-widget-placeholder": "master",
     "ignore.virus.scanning.warn.message": "true",
     "last_opened_file_path": "D:/my codes/1407Clothing/1407Clothing.html",
-    "settings.editor.selected.configurable": "preferences.pluginManager"
+    "settings.editor.selected.configurable": "preferences.pathVariables"
   }
 }]]></component>
   <component name="RunManager" selected="Python.EventPlannerApp">
