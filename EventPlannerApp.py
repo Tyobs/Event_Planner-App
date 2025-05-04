@@ -170,20 +170,26 @@ def delete_event(event_id):
 
 #this is a function that will be used in creating a vendor
 def create_vendor(vendor_name, vendor_contact, vendor_email, vendor_type, event_id):
+    conn = None
     try:
         conn = connect_db()
         cursor = conn.cursor()
         cursor.execute('''
-        INSERT INTO vendors (vendor_name, vendor_contact, vendor_email, vendor_type, event_id)
+        INSERT INTO vendor (vendor_name, vendor_contact, vendor_email, vendor_type, event_id)
         VALUES (?, ?, ?, ?, ?)
         ''', (vendor_name, vendor_contact, vendor_email, vendor_type, event_id))
         conn.commit()
         conn.close()
+        return True # Indicate success
     except sqlite3.Error as e:
         print(f"A vendor hasn't been created, try again later 🤨🤨🤨 {e}")
         if conn:
+            conn.rollback()
             conn.close()
-    return None
+        return False
+    finally:
+        if conn:
+            conn.close() # Ensure connection is closed even if errors occur
 
 #this is the function that will be used to read vendors vendor information into our database
 def read_vendors(event_id):
@@ -217,35 +223,47 @@ def read_vendor(vendor_id):
 
 #this function will be used to update a vendor's  information in our database
 def update_vendors(vendor_id, vendor_name, vendor_contact, vendor_email, vendor_type):
+    conn = None
     try:
         conn = connect_db()
-        cursor =  conn.cursor()
+        cursor = conn.cursor()
         cursor.execute('''
-        UPDATE vendors
+        UPDATE vendor
         SET vendor_name = ?, vendor_contact = ?, vendor_email = ?, vendor_type = ?
         WHERE vendor_id = ?
         ''', (vendor_name, vendor_contact, vendor_email, vendor_type, vendor_id))
         conn.commit()
         conn.close()
+        return True
     except sqlite3.Error as e:
-        print(f"Error occurred while trying to update the vendor.👽👽 {e}")
+        print(f"Error updating vendor with ID {vendor_id}: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return False
+    finally:
         if conn:
             conn.close()
-    return None
-
 #This function will be used in deleting a vendor
 def delete_vendor(vendor_id):
+    conn = None
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        cursor.execute('DELETE FROM vendors WHERE vendor_id = ?', (vendor_id,))
+        cursor.execute('DELETE FROM vendor WHERE vendor_id = ?', (vendor_id,))
         conn.commit()
         conn.close()
+        return True
     except sqlite3.Error as e:
-        print(f"Error occurred while trying to delete a vendor {e}")
+        print(f"Error deleting vendor with ID {vendor_id}: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return False
+    finally:
         if conn:
             conn.close()
-    return None
+
 # this function will be used to create a budget
 def create_budget(event_id, category, amount, description):
     try:
@@ -588,22 +606,33 @@ class EventPlannerApp:
 
     def create_vendor_tab(self):
         self.vendor_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.vendor_frame, text="Vendors")
+        self.notebook.add(self.vendor_frame, text='Vendors')
 
-        self.vendor_list = tk.Listbox(self.vendor_frame, width=50)
-        self.vendor_list.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        self.vendors_tree = ttk.Treeview(self.vendor_frame,columns=('ID', 'Event ID', 'Name', 'Contact', 'Email', 'Type'), show='headings')
+        self.vendors_tree.heading('ID', text='Vendor ID')
+        self.vendors_tree.heading('Event ID', text='Event ID')
+        self.vendors_tree.heading('Name', text='Vendor Name')
+        self.vendors_tree.heading('Contact', text='Contact')
+        self.vendors_tree.heading('Email', text='Email')
+        self.vendors_tree.heading('Type', text='Vendor Type')
+        self.vendors_tree.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-        load_vendors_button = ttk.Button(self.vendor_frame, text="Load Tasks")
-        load_vendors_button.pack(pady=5)
+        ttk.Label(self.vendor_frame, text="Select Vendor by ID:").pack(pady=5)
+        self.select_vendor_id_entry = ttk.Entry(self.vendor_frame, width=10)
+        self.select_vendor_id_entry.pack(pady=5)
 
-        self.create_vendor_button = ttk.Button(self.vendor_frame, text="Add new task")
-        self.create_vendor_button.pack(pady=5)
+        load_vendors_button = ttk.Button(self.vendor_frame, text="Load All Vendors", command=self.load_all_vendors)
+        load_vendors_button.pack(pady=5, fill=tk.X)
 
-        self.update_vendor_button = ttk.Button(self.vendor_frame, text="Update Task")
-        self.update_vendor_button.pack(pady=5)
+        add_vendor_button = ttk.Button(self.vendor_frame, text="Add New Vendor", command=self.open_add_vendor_window)
+        add_vendor_button.pack(pady=5, fill=tk.X)
 
-        self.delete_vendor_button = ttk.Button(self.vendor_frame, text="Delete task")
-        self.delete_vendor_button.pack(pady=5)
+        update_vendor_button = ttk.Button(self.vendor_frame, text="Update Vendor",
+                                          command=self.open_update_vendor_window)
+        update_vendor_button.pack(pady=5, fill=tk.X)
+
+        delete_vendor_button = ttk.Button(self.vendor_frame, text="Delete Vendor", command=self.delete_selected_vendor)
+        delete_vendor_button.pack(pady=5, fill=tk.X)
 
 #this function will enable the selection of an existing event in events tab
     def on_event_select(self, event):
@@ -1268,6 +1297,173 @@ class EventPlannerApp:
         except ValueError:
             messagebox.showerror("Error", "Please enter a numeric Budget ID.")
 
+#this function will be caled in loading the vendors to the main window
+    def load_all_vendors(self):
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT vendor_id, event_id, vendor_name, vendor_contact, vendor_email, vendor_type FROM vendor')
+        vendors = cursor.fetchall()
+        conn.close()
+
+        # Clear existing items in the treeview
+        for item in self.vendors_tree.get_children():
+            self.vendors_tree.delete(item)
+
+        if vendors:
+            for vendor in vendors:
+                self.vendors_tree.insert('', tk.END, values=vendor)
+        else:
+            messagebox.showinfo("Info", "No vendors found.")
+
+#this function will be called whenever the user wants to create a new vendor
+    def open_add_vendor_window(self):
+        self.add_vendor_window = tk.Toplevel(self.window)
+        self.add_vendor_window.title("Add New Vendor")
+
+        tk.Label(self.add_vendor_window, text="Event ID:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.vendor_event_id_entry = tk.Entry(self.add_vendor_window, width=40)
+        self.vendor_event_id_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_vendor_window, text="Vendor Name:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.vendor_name_entry = tk.Entry(self.add_vendor_window, width=40)
+        self.vendor_name_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_vendor_window, text="Contact:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.vendor_contact_entry = tk.Entry(self.add_vendor_window, width=40)
+        self.vendor_contact_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_vendor_window, text="Email:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        self.vendor_email_entry = tk.Entry(self.add_vendor_window, width=40)
+        self.vendor_email_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        tk.Label(self.add_vendor_window, text="Vendor Type:").grid(row=4, column=0, padx=5, pady=5, sticky="w")
+        self.vendor_type_entry = tk.Entry(self.add_vendor_window, width=40)
+        self.vendor_type_entry.grid(row=4, column=1, padx=5, pady=5)
+
+        save_vendor_button = ttk.Button(self.add_vendor_window, text="Save Vendor", command=self.save_new_vendor)
+        save_vendor_button.grid(row=5, column=0, columnspan=2, padx=5, pady=10)
+
+        cancel_vendor_button = ttk.Button(self.add_vendor_window, text="Cancel", command=self.add_vendor_window.destroy)
+        cancel_vendor_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+
+#this function will be saving the recently created vendor
+    def save_new_vendor(self):
+        try:
+            event_id = int(self.vendor_event_id_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Invalid Event ID. Please enter a number.")
+            return
+
+        vendor_name = self.vendor_name_entry.get()
+        vendor_contact = self.vendor_contact_entry.get()
+        vendor_email = self.vendor_email_entry.get()
+        vendor_type = self.vendor_type_entry.get()
+
+        if not vendor_name or not vendor_contact or not vendor_type:
+            messagebox.showerror("Error", "Please fill in all the required fields (Name, Contact, Type).")
+            return
+
+        if create_vendor(vendor_name, vendor_contact, vendor_email, vendor_type, event_id):
+            messagebox.showinfo("Success", f"Vendor '{vendor_name}' added successfully for Event ID {event_id}!")
+            self.load_all_vendors()
+            self.add_vendor_window.destroy()
+        else:
+            messagebox.showerror("Error", "Failed to add the vendor. Please check the details.")
+
+
+#this function will be used to open a new window for updating a selected vendor
+    def open_update_vendor_window(self):
+        try:
+            vendor_id = int(self.select_vendor_id_entry.get())
+            if vendor_id > 0:
+                vendor = read_vendor(vendor_id)
+                if vendor:
+                    self.update_vendor_window = tk.Toplevel(self.window)
+                    self.update_vendor_window.title(f"Update Vendor: {vendor[1]}")
+
+                    tk.Label(self.update_vendor_window, text="Event ID:").grid(row=0, column=0, padx=5, pady=5,
+                                                                               sticky="w")
+                    self.update_vendor_event_id_entry = tk.Entry(self.update_vendor_window, width=40)
+                    self.update_vendor_event_id_entry.insert(0, vendor[5])
+                    self.update_vendor_event_id_entry.grid(row=0, column=1, padx=5, pady=5)
+                    self.update_vendor_event_id_entry.config(state="readonly")  # Prevent editing Event ID
+
+                    tk.Label(self.update_vendor_window, text="Vendor Name:").grid(row=1, column=0, padx=5, pady=5,
+                                                                                  sticky="w")
+                    self.update_vendor_name_entry = tk.Entry(self.update_vendor_window, width=40)
+                    self.update_vendor_name_entry.insert(0, vendor[1])
+                    self.update_vendor_name_entry.grid(row=1, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_vendor_window, text="Contact Info:").grid(row=2, column=0, padx=5, pady=5,
+                                                                                   sticky="w")
+                    self.update_vendor_contact_entry = tk.Entry(self.update_vendor_window, width=40)
+                    self.update_vendor_contact_entry.insert(0, vendor[2])
+                    self.update_vendor_contact_entry.grid(row=2, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_vendor_window, text="Email:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+                    self.update_vendor_email_entry = tk.Entry(self.update_vendor_window, width=40)
+                    self.update_vendor_email_entry.insert(0, vendor[3])
+                    self.update_vendor_email_entry.grid(row=3, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_vendor_window, text="Vendor Type:").grid(row=4, column=0, padx=5, pady=5,
+                                                                                  sticky="w")
+                    self.update_vendor_type_entry = tk.Entry(self.update_vendor_window, width=40)
+                    self.update_vendor_type_entry.insert(0, vendor[4])
+                    self.update_vendor_type_entry.grid(row=4, column=1, padx=5, pady=5)
+
+                    save_button = ttk.Button(self.update_vendor_window, text="Save Changes",command=self.save_updated_vendor)
+                    save_button.grid(row=5, column=0, columnspan=2, padx=5, pady=10)
+
+                    cancel_button = ttk.Button(self.update_vendor_window, text="Cancel",command=self.update_vendor_window.destroy)
+                    cancel_button.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+                else:
+                    messagebox.showerror("Error", f"Could not find vendor with ID: {vendor_id}")
+            else:
+                messagebox.showerror("Error", "Please enter a valid Vendor ID.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Vendor ID.")
+
+
+#this one will be used to save the updated vendor
+    def save_updated_vendor(self):
+        try:
+            vendor_id = int(self.select_vendor_id_entry.get())
+            if vendor_id > 0:
+                vendor_name = self.update_vendor_name_entry.get()
+                vendor_contact = self.update_vendor_contact_entry.get()
+                vendor_email = self.update_vendor_email_entry.get()
+                vendor_type = self.update_vendor_type_entry.get()
+
+                if not vendor_name or not vendor_contact or not vendor_type:
+                    messagebox.showerror("Error", "Please fill in all the required fields (Name, Contact, Type).")
+                    return
+
+                if update_vendors(vendor_id, vendor_name, vendor_contact, vendor_email, vendor_type):
+                    messagebox.showinfo("Success", f"Vendor '{vendor_name}' updated successfully!")
+                    self.load_all_vendors()
+                    self.update_vendor_window.destroy()
+                else:
+                    messagebox.showerror("Error", "Failed to update the vendor. Please check the details.")
+            else:
+                messagebox.showerror("Error", "Please enter a valid Vendor ID to update.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Vendor ID.")
+
+#this function will be used in deleting a vendor from the database
+    def delete_selected_vendor(self):
+        try:
+            vendor_id = int(self.select_vendor_id_entry.get())
+            if vendor_id > 0:
+                if messagebox.askyesno("Confirm", f"Are you sure you want to delete vendor ID {vendor_id}?"):
+                    if delete_vendor(vendor_id):
+                        messagebox.showinfo("Success", f"Vendor ID {vendor_id} deleted successfully!")
+                        self.load_all_vendors()
+                    else:
+                        messagebox.showerror("Error", f"Failed to delete vendor ID {vendor_id}.")
+            else:
+                messagebox.showerror("Error", "Please enter a valid Vendor ID.")
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a numeric Vendor ID.")
 
 if __name__ == "__main__":
     window = tk.Tk()
