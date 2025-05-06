@@ -77,4 +77,3 @@ o	Signing up is quick and easy.
 •	Being able to import or export your event info.
 •	Maybe even more ways to manage users later on.
 
-
