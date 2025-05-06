@@ -4,6 +4,7 @@ from tkinter import *
 from tkinter import messagebox
 import sqlite3
 import os.path
+import hashlib
 
 #from pywin32_testutil import non_admin_error_codes
 #from wx.lib.agw.ultimatelistctrl import wxEVT_COMMAND_LIST_COL_END_DRAG
@@ -77,6 +78,14 @@ if not os.path.isfile(DB_FILE):
             FOREIGN KEY (event_id) REFERENCES events (event_id)
         )
     ''')
+    # creating the users table for security and authentication
+    cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL
+            )
+        ''')
 
     #commiting the changes and close the connection
     conn.commit()
@@ -211,7 +220,7 @@ def read_vendor(vendor_id):
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM vendors WHERE vendor_id = ?', (vendor_id,))
+        cursor.execute('SELECT * FROM vendor WHERE vendor_id = ?', (vendor_id,))
         vendor = cursor.fetchone()
         conn.close()
         return vendor
@@ -485,12 +494,85 @@ def delete_guest(guest_id):
 class EventPlannerApp:
     def __init__(self, window):
         self.window = window
+        self.window.title("Event Planner - Login")
+        self.show_login_window()
+# this will be showing the main window as the log in window before launching to the app
+    def show_login_window(self):
+        # Clear any existing widgets in the main window
+        for widget in self.window.winfo_children():
+            widget.destroy()
+
+        self.login_frame = ttk.Frame(self.window)
+        self.login_frame.pack(padx=20, pady=20)
+
+        tk.Label(self.login_frame, text="Username:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.login_username_entry = tk.Entry(self.login_frame, width=30)
+        self.login_username_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(self.login_frame, text="Password:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.login_password_entry = tk.Entry(self.login_frame, width=30 , show="*")
+        self.login_password_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        login_button = ttk.Button(self.login_frame, text="Login", command=self.login)
+        login_button.grid(row=2, column=0, columnspan=2, padx=5, pady=10)
+
+        register_button = ttk.Button(self.login_frame, text="Register", command=self.open_registration_window)
+        register_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+
+    def login(self):
+        username = self.login_username_entry.get()
+        password = self.login_password_entry.get()
+
+        if not username or not password:
+            messagebox.showerror("Error", "Please enter both username and password.")
+            return
+
+        stored_password_hash = self.get_password_hash(username)
+
+        if stored_password_hash:
+            if self.verify_password(stored_password_hash, password):
+                messagebox.showinfo("Success", "Login successful!")
+                self.show_main_app()
+            else:
+                messagebox.showerror("Error", "Invalid password.")
+                self.login_username_entry.delete(0, tk.END)
+                self.login_password_entry.delete(0, tk.END)
+        else:
+            messagebox.showerror("Error", "Invalid username.")
+            self.login_username_entry.delete(0, tk.END)
+            self.login_password_entry.delete(0, tk.END)
+
+    def get_password_hash(self, username):
+        conn = None
+        try:
+            conn = connect_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT password_hash FROM users WHERE username = ?", (username,))
+            result = cursor.fetchone()
+            if result:
+                return result[0]
+            else:
+                return None
+        except sqlite3.Error as e:
+            print(f"Database error during login: {e}")
+            return None
+        finally:
+            if conn:
+                conn.close()
+
+#this function will then be called after a successful log in
+    def show_main_app(self):
+        # Clear the login window widgets
+        for widget in self.window.winfo_children():
+            widget.destroy()
+
         self.window.title("Event Planner")
 
         self.notebook = ttk.Notebook(self.window)
         self.notebook.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
         self.create_widgets()
+
 #This function will create special widgets for the whole functionality of the window
     def create_widgets(self):
         self.create_events_tab()
@@ -1464,6 +1546,96 @@ class EventPlannerApp:
                 messagebox.showerror("Error", "Please enter a valid Vendor ID.")
         except ValueError:
             messagebox.showerror("Error", "Please enter a numeric Vendor ID.")
+
+#this is the registration window for registering the new user
+    def open_registration_window(self):
+        self.registration_window = tk.Toplevel(self.window)
+        self.registration_window.title("Register New User")
+
+        tk.Label(self.registration_window, text="Username:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.register_username_entry = tk.Entry(self.registration_window, width=30)
+        self.register_username_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(self.registration_window, text="Password:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.register_password_entry = tk.Entry(self.registration_window, width=30,
+                                                show="*")  # Use show="*" to hide password
+        self.register_password_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Label(self.registration_window, text="Confirm Password:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.register_confirm_password_entry = tk.Entry(self.registration_window, width=30, show="*")
+        self.register_confirm_password_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        register_button = ttk.Button(self.registration_window, text="Register", command=self.register_user)
+        register_button.grid(row=3, column=0, columnspan=2, padx=5, pady=10)
+
+        cancel_button = ttk.Button(self.registration_window, text="Cancel", command=self.registration_window.destroy)
+        cancel_button.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
+
+# this function will be used when registering the user to the app for data security
+    def register_user(self):
+        username = self.register_username_entry.get()
+        password = self.register_password_entry.get()
+        confirm_password = self.register_confirm_password_entry.get()
+
+        if not username or not password or not confirm_password:
+            messagebox.showerror("Error", "All fields are required.")
+            return
+
+        if password != confirm_password:
+            messagebox.showerror("Error", "Passwords do not match.")
+            self.register_password_entry.delete(0, tk.END)
+            self.register_confirm_password_entry.delete(0, tk.END)
+            return
+
+        # Hash the password before saving
+        hashed_password = self.hash_password(password)
+
+        if self.save_user_to_database(username, hashed_password):
+            messagebox.showinfo("Success", "User registered successfully! You can now log in.")
+            self.registration_window.destroy()
+        else:
+            messagebox.showerror("Error", "Registration failed. Username may already exist.")
+
+#this function will be used in generating a hashed password for the user on one time registration
+    def hash_password(self, password):
+        salt = os.urandom(16)  # Generate a random salt
+        pwdhash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'),salt, 100000)
+        return salt.hex() + ':' + pwdhash.hex()
+#the user will be prompted to change to new password they will remember
+    def verify_password(self, stored_password, provided_password):
+        import hashlib
+        try:
+            salt, pwdhash = stored_password.split(':')
+            salt = bytes.fromhex(salt)
+            pwdhash = hashlib.pbkdf2_hmac('sha256', provided_password.encode('utf-8'),
+                                          salt, 100000)
+            return pwdhash.hex() == pwdhash.hex()
+        except (ValueError, AttributeError):
+            # Handle cases where stored_password might be malformed
+            return False
+
+#this function will be saving the details of the new user to our database
+    def save_user_to_database(self, username, password_hash):
+        conn = None
+        try:
+            conn = connect_db()
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            # Username already exists
+            if conn:
+                conn.rollback()
+            return False
+        except sqlite3.Error as e:
+            print(f"Database error during registration: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if conn:
+                conn.close()
 
 if __name__ == "__main__":
     window = tk.Tk()
