@@ -854,14 +854,15 @@ class EventPlannerApp:
         event_description = self.event_description_entry.get("1.0", tk.END).strip()
 
         if not event_name or not event_date or not event_time or not event_location:
-            messagebox.showerror("Blank Input", "An Error⚠️ occurred due to blank fill. Please fill in the entry spaces provided😊.")
+            messagebox.showerror("Error", "Please fill in all the required fields.")
             return
-        if  create_event(event_name, event_date, event_time, event_location, event_description):
-            messagebox.showinfo("Success😊", f"You ave successfully created and event '{event_name}'!😊")
-            self.load_events()
-            self.create_event_window.destroy()
+
+        if create_event(event_name, event_date, event_time, event_location, event_description):
+            messagebox.showinfo("Success", f"Event '{event_name}' created successfully!")
+            self.create_event_window.destroy()  # Destroy the create event window after saving
+            self.load_events()  # Reload the events list
         else:
-            messagebox.showerror("ERROR!", "Oooops! The system has failed to create the task. Please check the details.")
+            messagebox.showerror("Error", "Failed to create the event. Please check the details.")
 
 #this function will be used to save the updated event
     def save_updated_event(self):
@@ -990,20 +991,13 @@ class EventPlannerApp:
                     self.update_task_event_id_entry.insert(0, task[1])
                     self.update_task_event_id_entry.grid(row=0, column=1, padx=5, pady=5)
 
-                    tk.Label(self.update_task_window, text="Task Name:").grid(row=1, column=0, padx=5, pady=5,
-                                                                              sticky="w")
+                    tk.Label(self.update_task_window, text="Task Name:").grid(row=1, column=0, padx=5, pady=5,sticky="w")
                     self.update_task_name_entry = tk.Entry(self.update_task_window, width=40)
                     self.update_task_name_entry.insert(0, task[2])
                     self.update_task_name_entry.grid(row=1, column=1, padx=5, pady=5)
 
-                    tk.Label(self.update_task_window, text="Description:").grid(row=2, column=0, padx=5, pady=5,
-                                                                                sticky="w")
-                    self.update_task_description_entry = tk.Text(self.update_task_window, width=30, height=5)
-                    self.update_task_description_entry.insert(tk.END, task[3])
-                    self.update_task_description_entry.grid(row=2, column=1, padx=5, pady=5)
 
-                    tk.Label(self.update_task_window, text="Due Date (DD/MM/YYYY):").grid(row=3, column=0, padx=5,
-                                                                                          pady=5, sticky="w")
+                    tk.Label(self.update_task_window, text="Due Date (DD/MM/YYYY):").grid(row=3, column=0, padx=5,pady=5, sticky="w")
                     self.update_task_due_date_entry = tk.Entry(self.update_task_window, width=40)
                     self.update_task_due_date_entry.insert(0, task[4])
                     self.update_task_due_date_entry.grid(row=3, column=1, padx=5, pady=5)
@@ -1012,6 +1006,12 @@ class EventPlannerApp:
                     self.update_task_status_entry = tk.Entry(self.update_task_window, width=40)
                     self.update_task_status_entry.insert(0, task[5])
                     self.update_task_status_entry.grid(row=4, column=1, padx=5, pady=5)
+
+                    tk.Label(self.update_task_window, text="Description:").grid(row=2, column=0, padx=5, pady=5,sticky="w")
+                    self.update_task_description_entry = tk.Text(self.update_task_window, width=30, height=5)
+                    self.update_task_description_entry.insert(tk.END, task[3])
+                    self.update_task_description_entry.grid(row=2, column=1, padx=5, pady=5)
+
 
                     save_button = ttk.Button(self.update_task_window, text="Save Changes", command=self.save_updated_task)
                     save_button.grid(row=5, column=0, columnspan=2, padx=5, pady=10)
