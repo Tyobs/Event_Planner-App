@@ -1,4 +1,4 @@
-1. Documentation 
+1.  DOCUMENTATION 
 This .md gives you the lowdown on the Event Planner app – your new best friend for getting those parties and gatherings sorted!
 
 1.1. Overview
