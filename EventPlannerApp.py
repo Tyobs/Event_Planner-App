@@ -6,9 +6,6 @@ import sqlite3
 import os.path
 import hashlib
 
-#from pywin32_testutil import non_admin_error_codes
-#from wx.lib.agw.ultimatelistctrl import wxEVT_COMMAND_LIST_COL_END_DRAG
-
 DB_FILE = 'event_planner.db'
 def connect_db():
     return sqlite3.connect(DB_FILE)
@@ -1636,6 +1633,10 @@ class EventPlannerApp:
         finally:
             if conn:
                 conn.close()
+
+
+
+
 
 if __name__ == "__main__":
     window = tk.Tk()
